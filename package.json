@@ -1,0 +1,32 @@
+{
+  "name": "pico-slack",
+  "version": "1.0.0",
+  "description": "An incredibly tiny Slack bot library",
+  "main": "pico-slack.js",
+  "scripts": {
+    "test": ""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stolksdorf/pico-slack.git"
+  },
+  "keywords": [
+    "pico",
+    "slack",
+    "tiny"
+  ],
+  "author": "stolksdorf",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/stolksdorf/pico-slack/issues"
+  },
+  "homepage": "https://github.com/stolksdorf/pico-slack#readme",
+  "dependencies": {
+    "lodash": "^4.17.4",
+    "superagent": "^3.5.2",
+    "ws": "^2.2.2"
+  },
+  "devDependencies": {
+    "ava": "^0.18.2"
+  }
+}
