@@ -7,7 +7,7 @@ build/*
 
 # Ignore sensitive stuff
 config/local.json
-tests/slack_token.js
+tests/slack_token.json
 
 node_modules
 storage
