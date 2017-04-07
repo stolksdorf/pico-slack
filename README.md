@@ -12,18 +12,10 @@ npm install --save pico-slack
 
 ## features
 
-- **Under 150 lines**
+- **150 lines**
+- Logging to Slack with traces
 -
 
-
-
-### test
-Add a file called `./tests/slack_token.json`, that has
-```
-{
-	"token" : "xoxb-00000000000-xxxxxxxxxxxxxxxxxxxx"
-}
-```
 
 
 
@@ -34,13 +26,12 @@ Add a file called `./tests/slack_token.json`, that has
 ```javascript
 const Slack = require('pico-slack');
 
-
 Slack.connect('xoxb-00000000000-xxxxxxxxxxxxxxxxxxxx')
 	.then(()=>Slack.msg('general', 'hello world!'))
 
 Slack.onMessage((msg)=>{
-	if(msg.channel == 'general'){
-		Slack.react(msg, 'pizza');
+	if(msg.channel == 'general' && Slack.msgHas(msg.text, ['hey', 'hello'])){
+		Slack.react(msg, 'wave');
 	}
 });
 ```
@@ -90,8 +81,8 @@ Slack.emitter.on('user_typing', (event)=>{
   text: 'This is a test message',
   ts: '1491187485.521588',
   team: 'T0000000',
-  channel_id: 'C00000000',
-  user_id: 'U00000000',
+  channel_id: 'general',
+  user_id: 'scott',
   isDirect : false
 }
 ```
@@ -99,33 +90,41 @@ Slack.emitter.on('user_typing', (event)=>{
 #### `.onMessage(handler)`
 Alias for `Slack.emitter.on('message', handler)`
 
+```javascript
+Slack.onMessage((msg)=>{
+	console.log('I got a message', msg);
+	Slack.react(msg, ':thumbsup:')
+		.catch((err)=>console.log(err))
+});
+```
+
 
 #### `.onReact(handler)`
 Alias for `Slack.emitter.on('reaction_added', handler)`
 
 
 ### properties
-On connect, `pico-slack` will populate several properities in the lib about your Slack team.
+On connect, `pico-slack` will populate several properities in the lib about your Slack team for ease of use.
 
 ```
-log_channel : 'diagnostics',
-channels : {
+Slack.log_channel : 'diagnostics',
+Slack.channels : {
 	C0VL784KT: 'general',
 	C0VL376TS: 'random',
 	C46606JAK: 'coolchats',
 },
-users    : {
+Slack.users : {
 	U0VKSFTB6: 'higgins',
 	U0VL783MX: 'scott',
 	U0WLTH1MY: 'coolguy',
 },
-bots     : {
+Slack.bots : {
 	B0VKVBSQ6: 'U0VKSFTB6',
 },
-dms      : {
+Slack.dms : {
 	D0VKSFTBN: 'scott'
 },
-bot : {
+Slack.bot : {
 	id : 'U0VKSFTB6',
 	name : 'higgins',
 	icon : ':robot_face:'
@@ -133,12 +132,43 @@ bot : {
 ```
 
 
-### utils & logging
+### logging
 Logging what your bot is doing can be tricky with Slack, so `pico-slack` has built in log functions.
 
-log : log.bind(null, ''),
-info : log.bind(null, 'good'),
-warn : log.bind(null, 'warning'),
-error : log.bind(null, 'danger'),
+```javascript
+Slack.log(...args)
+Slack.debug(...args)
+Slack.info(...args)
+Slack.warn(...args)
+Slack.error(...args)
+```
+
+These will print out a log message to the channel specified with `Slack.log_channel`. The filename andme line number will be included, along with a color indicator of the type of log you used.
+
+### utils
+
+#### `.msgHas(text, ...filters)`
+
+`msgHas` checks if the given `text` passes the `filters`. The `filters` can be any number of strings or array of strings. The text must have a substring from each parameter, or at least of one them if it's an array. Case-insenstive.
+
+*examples*
+```javascript
+Slack.msgHas('Hey there!', 'hey') -> true
+Slack.msgHas('Hey there!', 'hey', 'champ') -> false
+Slack.msgHas('Hey cool guy', ['greetings', 'hey'], ['scott', 'cool guy']) -> true
+```
+
+
+
+
+### test
+Add a file called `./tests/slack_token.json`, that has your slack token for the bot.
+```
+{
+	"token" : "xoxb-00000000000-xxxxxxxxxxxxxxxxxxxx"
+}
+```
+
+run `npm run test`
 
 

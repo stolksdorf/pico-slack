@@ -12,9 +12,7 @@ const processTeamData = (teamData)=>{
 	_.each(teamData.groups,   (channel)=>{ Slack.channels[channel.id] = channel.name; });
 	_.each(teamData.users,    (user)   =>{
 		Slack.users[user.id] = user.name;
-		if(user.profile && user.profile.bot_id){
-			Slack.bots[user.profile.bot_id] = user.id;
-		}
+		if(user.profile && user.profile.bot_id) Slack.bots[user.profile.bot_id] = user.id;
 	});
 	_.each(teamData.ims,(im)=>{ Slack.dms[im.id] = Slack.users[im.user]});
 };
