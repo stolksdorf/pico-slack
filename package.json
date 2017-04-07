@@ -4,7 +4,8 @@
   "description": "An incredibly tiny Slack bot library",
   "main": "pico-slack.js",
   "scripts": {
-    "test": ""
+    "test": "node tests/slack.test.js",
+    "dev": " nodemon tests/slack.test.js"
   },
   "repository": {
     "type": "git",
