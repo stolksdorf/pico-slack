@@ -40,7 +40,8 @@ const log = (color, ...args)=>{
 	console.log(...args);
 	if(!Slack.connected) return;
 	Error.prepareStackTrace = (err, stack)=>stack;
-	const caller = (new Error()).stack[1];
+	const err = _.find(args, (arg) =>arg instanceof Error);
+	const caller = err ? err.stack[0] : (new Error()).stack[1];
 	const fileName = path.relative(process.cwd(), caller.getFileName());
 	const lineNumber = caller.getLineNumber();
 	const text = _.map(args, (arg)=>{
@@ -89,9 +90,11 @@ const Slack = {
 
 					socket.on('open', resolve);
 					socket.on('message', (rawData, flags) => {
-						const message = processIncomingEvent(JSON.parse(rawData));
-						if(message.user_id === Slack.bot.id) return;
-						Slack.emitter.emit(message.type, message);
+						try{
+							const message = processIncomingEvent(JSON.parse(rawData));
+							if(message.user_id === Slack.bot.id) return;
+							Slack.emitter.emit(message.type, message);
+						}catch(err){ Slack.error(err); }
 					});
 				});
 			})
@@ -118,7 +121,7 @@ const Slack = {
 			icon_emoji : Slack.bot.icon
 		}, opts))
 	},
-	msgAs : (botname, boticon, target, text)=>Slack.msg(target, text, {username: botname, icon_emoji:boticon}),
+	msgAs : (botname, boticon, target, text)=>Slack.msg(target, text, {username: botname, icon_emoji:`:${_.replace(boticon, /:/g, '')}:`}),
 	react : (msg, emoji)=>{
 		return Slack.api('reactions.add', {
 			channel   : msg.channel_id || msg.channel,
