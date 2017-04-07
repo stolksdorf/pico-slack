@@ -55,8 +55,12 @@ Sends a promised web API request to Slack using the `token`. `command` is from [
 #### `.msg(target, text, [opts])`
 Sends an IM to `target` (user or channel, id or name) with the `text`. `opts` is additional parameters to be sent with the request. Uses `.api()`.
 
+#### `.msgAs(bot_name, bot_icon, target, text)
+Sends an IM as `bot_name` with `bot_icon` to `target` with `text`.
+
+
 #### `.react(event_object, emoji)`
-Reacts to a given message with the `emoji`. This function uses the channel id and timestamp from the provided `event_object` to make the API call.
+Reacts to a given message with the `emoji`. This function uses the channel id and timestamp from the provided `event_object` to make the API call. It's best to jst pass the `event_object` you get from a handler.
 
 
 ### events
