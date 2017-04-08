@@ -42,8 +42,8 @@ const log = (color, ...args)=>{
 	Error.prepareStackTrace = (err, stack)=>stack;
 	const err = _.find(args, (arg) =>arg instanceof Error);
 	const caller = err ? err.stack[0] : (new Error()).stack[1];
-	const fileName = path.relative(process.cwd(), caller.getFileName());
-	const lineNumber = caller.getLineNumber();
+	const fileName = caller.getFileName ? path.relative(process.cwd(), caller.getFileName()) : '???';
+	const lineNumber = caller.getLineNumber ? caller.getLineNumber() : '???'
 	const text = _.map(args, (arg)=>{
 		if(arg instanceof Error) return arg.toString();
 		return JSON.stringify(arg, null, '  ')
