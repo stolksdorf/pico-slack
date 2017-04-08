@@ -105,7 +105,7 @@ const Slack = {
 		return new Promise((resolve, reject)=>{
 			request
 				.get(`https://slack.com/api/${command}`)
-				.query(_.assign(payload, { token : Slack.token }))
+				.query(_.assign({ token : Slack.token }, payload))
 				.end((err, res)=>{
 					if(err || (res.body && res.body.ok === false)) return reject(err || res.body.error);
 					return resolve(res.body);
