@@ -32,30 +32,29 @@ const processIncomingEvent = (msg)=>{
 	if(msg.username) res.user = msg.username;
 	if(res.channel_id && res.channel_id[0] == 'D'){
 		res.isDirect = true;
-		res.channel = 'direct';
+		res.channel = res.channel_id;
 	}
 	return res;
 };
 const log = (color, ...args)=>{
-	console.log(...args);
+	const text = _.map(args, (arg)=>{
+		if(arg instanceof Error) return arg.toString();
+		return JSON.stringify(arg, null, '  ')
+	})
+	console.log(...text);
 	if(!Slack.connected) return;
 	Error.prepareStackTrace = (err, stack)=>stack;
 	const err = _.find(args, (arg) =>arg instanceof Error);
 	const caller = err ? err.stack[0] : (new Error()).stack[1];
 	const fileName = caller.getFileName ? path.relative(process.cwd(), caller.getFileName()) : '???';
 	const lineNumber = caller.getLineNumber ? caller.getLineNumber() : '???'
-	const text = _.map(args, (arg)=>{
-		if(arg instanceof Error) return arg.toString();
-		return JSON.stringify(arg, null, '  ')
-	}).join(', ');
-
 	return Slack.api('chat.postMessage', {
 		channel    : Slack.log_channel,
 		username   : Slack.bot.name,
 		icon_emoji : Slack.bot.icon,
 		attachments: JSON.stringify([{
 			color     : color,
-			text      : '```' + text + '```',
+			text      : '```' + text.join(', ') + '```',
 			mrkdwn_in : ['text'],
 			footer : `${fileName}:${lineNumber}`
 		}])
@@ -113,9 +112,9 @@ const Slack = {
 		});
 	},
 	msg : (target, text, opts)=>{
-		const dm = _.findKey(Slack.dms, (user)=>target == user);
+		const directMsg = _.findKey(Slack.dms, (user)=>target == user);
 		return Slack.api('chat.postMessage', _.assign({
-			channel    : (dm || target),
+			channel    : (directMsg || target),
 			text       : text,
 			username   : Slack.bot.name,
 			icon_emoji : Slack.bot.icon
@@ -143,11 +142,13 @@ const Slack = {
 	//Utils
 	msgHas : (msg, ...filters)=>{
 		if(!msg) return false;
+		if(msg.text) msg = msg.text;
 		msg = msg.toLowerCase();
 		return _.every(filters, (opts)=>{
 			if(_.isString(opts)) opts = [opts];
 			return _.some(opts, (opt)=>msg.indexOf(opt.toLowerCase()) !== -1)
 		});
 	},
+	messageHas : (...args)=>Slack.msgHas(...args)
 }
 module.exports = Slack;

@@ -55,7 +55,7 @@ Sends a promised web API request to Slack using the `token`. `command` is from [
 #### `.msg(target, text, [opts])`
 Sends an IM to `target` (user or channel, id or name) with the `text`. `opts` is additional parameters to be sent with the request. Uses `.api()`.
 
-#### `.msgAs(bot_name, bot_icon, target, text)
+#### `.msgAs(bot_name, bot_icon, target, text)`
 Sends an IM as `bot_name` with `bot_icon` to `target` with `text`.
 
 
@@ -147,7 +147,7 @@ Slack.warn(...args)
 Slack.error(...args)
 ```
 
-These will print out a log message to the channel specified with `Slack.log_channel`. The filename andme line number will be included, along with a color indicator of the type of log you used.
+These will print out a log message to the channel specified with `Slack.log_channel`. The filename and line number will be included, along with a color indicator of the type of log you used.
 
 ### utils
 
@@ -161,8 +161,6 @@ Slack.msgHas('Hey there!', 'hey') -> true
 Slack.msgHas('Hey there!', 'hey', 'champ') -> false
 Slack.msgHas('Hey cool guy', ['greetings', 'hey'], ['scott', 'cool guy']) -> true
 ```
-
-
 
 
 ### test
