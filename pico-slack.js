@@ -143,12 +143,12 @@ const Slack = {
 	msgHas : (msg, ...filters)=>{
 		if(!msg) return false;
 		if(msg.text) msg = msg.text;
+		if(!_.isString(msg)) return false;
 		msg = msg.toLowerCase();
 		return _.every(filters, (opts)=>{
 			if(_.isString(opts)) opts = [opts];
 			return _.some(opts, (opt)=>msg.indexOf(opt.toLowerCase()) !== -1)
 		});
 	},
-	messageHas : (...args)=>Slack.msgHas(...args)
 }
 module.exports = Slack;
