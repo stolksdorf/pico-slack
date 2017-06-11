@@ -14,9 +14,7 @@ npm install --save pico-slack
 
 - **150 lines**
 - Logging to Slack with traces
--
-
-
+- Mapping of Slack User ids to User names
 
 
 ## documentation
@@ -73,6 +71,9 @@ Slack.emitter.on('user_typing', (event)=>{
 	//...
 });
 ```
+
+#### `.socket`
+Access tot he websocket communicating with Slack.
 
 #### `event object`
 `pico-slack` will parse and extend the incoming socket event from Slack. This is what is passed to event handlers.

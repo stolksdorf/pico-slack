@@ -4,8 +4,6 @@ const path = require('path');
 const WebSocket = require('ws');
 const Events = require('events');
 
-let socket;
-
 const processTeamData = (teamData)=>{
 	Slack.bot.id = teamData.self.id;
 	_.each(teamData.channels, (channel)=>{ Slack.channels[channel.id] = channel.name; });
@@ -64,6 +62,7 @@ const log = (color, ...args)=>{
 const Slack = {
 	connected : false,
 	token : '',
+	socket : null,
 	log_channel : 'diagnostics',
 	channels : {},
 	users    : {},
@@ -85,10 +84,10 @@ const Slack = {
 				return new Promise((resolve, reject)=>{
 					if (!data.ok || !data.url) return reject(`bad access token`);
 					processTeamData(data);
-					socket = new WebSocket(data.url);
+					Slack.socket = new WebSocket(data.url);
 
-					socket.on('open', resolve);
-					socket.on('message', (rawData, flags) => {
+					Slack.socket.on('open', resolve);
+					Slack.socket.on('message', (rawData, flags) => {
 						try{
 							const message = processIncomingEvent(JSON.parse(rawData));
 							if(message.user_id === Slack.bot.id) return;
@@ -99,7 +98,7 @@ const Slack = {
 			})
 			.then(()=>Slack.connected = true)
 	},
-	close : ()=>new Promise((resolve, reject)=>socket.close(()=>resolve())),
+	close : ()=>new Promise((resolve, reject)=>Slack.socket.close(()=>resolve())),
 	api : (command, payload) => {
 		return new Promise((resolve, reject)=>{
 			request
@@ -112,6 +111,7 @@ const Slack = {
 		});
 	},
 	msg : (target, text, opts)=>{
+		target = target.channel_id || target
 		const directMsg = _.findKey(Slack.dms, (user)=>target == user);
 		return Slack.api('chat.postMessage', _.assign({
 			channel    : (directMsg || target),
