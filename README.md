@@ -86,8 +86,8 @@ Access tot he websocket communicating with Slack.
   text: 'This is a test message',
   ts: '1491187485.521588',
   team: 'T0000000',
-  channel_id: 'general',
-  user_id: 'scott',
+  channel_id: 'C0VL784KT',
+  user_id: 'U0VL783MX',
   isDirect : false
 }
 ```
