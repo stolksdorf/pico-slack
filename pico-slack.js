@@ -120,7 +120,7 @@ const Slack = {
 			icon_emoji : Slack.bot.icon
 		}, opts))
 	},
-	sendAs : (botname, boticon, target, text)=>Slack.msg(target, text, {username: botname, icon_emoji:`:${_.replace(boticon, /:/g, '')}:`}),
+	sendAs : (botname, boticon, target, text)=>Slack.send(target, text, {username: botname, icon_emoji:`:${_.replace(boticon, /:/g, '')}:`}),
 	react : (msg, emoji)=>{
 		return Slack.api('reactions.add', {
 			channel   : msg.channel_id || msg.channel,
