@@ -110,7 +110,7 @@ const Slack = {
 				});
 		});
 	},
-	msg : (target, text, opts)=>{
+	send : (target, text, opts)=>{
 		target = target.channel_id || target
 		const directMsg = _.findKey(Slack.dms, (user)=>target == user);
 		return Slack.api('chat.postMessage', _.assign({
@@ -120,7 +120,7 @@ const Slack = {
 			icon_emoji : Slack.bot.icon
 		}, opts))
 	},
-	msgAs : (botname, boticon, target, text)=>Slack.msg(target, text, {username: botname, icon_emoji:`:${_.replace(boticon, /:/g, '')}:`}),
+	sendAs : (botname, boticon, target, text)=>Slack.msg(target, text, {username: botname, icon_emoji:`:${_.replace(boticon, /:/g, '')}:`}),
 	react : (msg, emoji)=>{
 		return Slack.api('reactions.add', {
 			channel   : msg.channel_id || msg.channel,
@@ -133,10 +133,10 @@ const Slack = {
 	onMessage : (handler)=>Slack.emitter.on('message', handler),
 	onReact : (handler)=>Slack.emitter.on('reaction_added', handler),
 
-	log : log.bind(null, ''),
-	debug: log.bind(null, '#3498db'),
-	info : log.bind(null, 'good'),
-	warn : log.bind(null, 'warning'),
+	log   : log.bind(null, ''),
+	debug : log.bind(null, '#3498db'),
+	info  : log.bind(null, 'good'),
+	warn  : log.bind(null, 'warning'),
 	error : log.bind(null, 'danger'),
 
 	//Utils
@@ -150,5 +150,11 @@ const Slack = {
 			return _.some(opts, (opt)=>msg.indexOf(opt.toLowerCase()) !== -1)
 		});
 	},
-}
+};
+
+//Aliases
+Slack.msg   = Slack.send;
+Slack.msgAs = Slack.sendAs;
+
+
 module.exports = Slack;
