@@ -4,6 +4,8 @@ const path = require('path');
 const WebSocket = require('ws');
 const Events = require('events');
 
+let pingCount = 0;
+
 const processTeamData = (teamData)=>{
 	Slack.bot.id = teamData.self.id;
 	_.each(teamData.channels, (channel)=>{ Slack.channels[channel.id] = channel.name; });
@@ -63,6 +65,7 @@ const Slack = {
 	connected : false,
 	token : '',
 	socket : null,
+	pingTimer : null,
 	log_channel : 'diagnostics',
 	channels : {},
 	users    : {},
@@ -89,16 +92,22 @@ const Slack = {
 					Slack.socket.on('open', resolve);
 					Slack.socket.on('message', (rawData, flags) => {
 						try{
-							const message = processIncomingEvent(JSON.parse(rawData));
+							const msg = JSON.parse(rawData);
+							if(msg.error) return Slack.error(msg);
+							const message = processIncomingEvent(msg);
 							if(message.user_id === Slack.bot.id) return;
 							Slack.emitter.emit(message.type, message);
 						}catch(err){ Slack.error(err); }
 					});
 				});
 			})
+			.then(()=>Slack.pingTimer=setInterval(Slack.ping, 5000))
 			.then(()=>Slack.connected = true)
 	},
-	close : ()=>new Promise((resolve, reject)=>Slack.socket.close(()=>resolve())),
+	close : ()=>new Promise((resolve, reject)=>{
+		clearInterval(Slack.pingTimer);
+		Slack.socket.close(()=>resolve())
+	}),
 	api : (command, payload) => {
 		return new Promise((resolve, reject)=>{
 			request
@@ -128,10 +137,14 @@ const Slack = {
 			timestamp : msg.ts
 		});
 	},
+	ping : ()=>{
+		pingCount++;
+		Slack.socket.send(JSON.stringify({id: pingCount, type : 'ping'}));
+	},
 
-	emitter : new Events(),
+	emitter   : new Events(),
 	onMessage : (handler)=>Slack.emitter.on('message', handler),
-	onReact : (handler)=>Slack.emitter.on('reaction_added', handler),
+	onReact   : (handler)=>Slack.emitter.on('reaction_added', handler),
 
 	log   : log.bind(null, ''),
 	debug : log.bind(null, '#3498db'),
