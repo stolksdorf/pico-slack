@@ -1,6 +1,6 @@
 {
   "name": "pico-slack",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "An incredibly tiny Slack bot library",
   "main": "pico-slack.js",
   "scripts": {
@@ -23,11 +23,8 @@
   },
   "homepage": "https://github.com/stolksdorf/pico-slack#readme",
   "dependencies": {
-    "lodash": "^4.17.4",
-    "superagent": "^3.5.2",
-    "ws": "^2.2.2"
-  },
-  "devDependencies": {
-    "ava": "^0.18.2"
+    "lodash": "^4.17.10",
+    "superagent": "^3.8.3",
+    "ws": "^6.0.0"
   }
 }
