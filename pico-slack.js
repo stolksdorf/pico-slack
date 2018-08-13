@@ -37,17 +37,23 @@ const processIncomingEvent = (msg)=>{
 	return res;
 };
 const log = (color, ...args)=>{
-	const text = _.map(args, (arg)=>{
+	const text = args.map((arg)=>{
 		if(arg instanceof Error) return arg.toString();
 		return JSON.stringify(arg, null, '  ')
-	})
+	});
 	console.log(...text);
 	if(!Slack.connected) return;
-	Error.prepareStackTrace = (err, stack)=>stack;
-	const err = _.find(args, (arg) =>arg instanceof Error);
+	const cache = Error.prepareStackTrace;
+	Error.prepareStackTrace = (_, stack)=>stack;
+	const err = args.find((arg) =>arg instanceof Error);
 	const caller = err ? err.stack[0] : (new Error()).stack[1];
-	const fileName = caller.getFileName ? path.relative(process.cwd(), caller.getFileName()) : '???';
-	const lineNumber = caller.getLineNumber ? caller.getLineNumber() : '???'
+	const info = {
+		name : caller.getFunctionName(),
+		file : caller.getFileName(),
+		line : caller.getLineNumber(),
+		col  : caller.getColumnNumber(),
+	};
+	Error.prepareStackTrace = cache;
 	return Slack.api('chat.postMessage', {
 		channel    : Slack.log_channel,
 		username   : Slack.bot.name,
@@ -56,7 +62,7 @@ const log = (color, ...args)=>{
 			color     : color,
 			text      : '```' + text.join(', ') + '```',
 			mrkdwn_in : ['text'],
-			footer : `${fileName}:${lineNumber}`
+			footer : `${info.file}:${info.line} from ${info.name}`
 		}])
 	}).catch(()=>{})
 };
