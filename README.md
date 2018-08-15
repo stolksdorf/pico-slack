@@ -50,8 +50,8 @@ Changes the default bot name and icon used for each `.msg` call
 Sends a promised web API request to Slack using the `token`. `command` is from [this list](https://api.slack.com/methods).
 
 
-#### `.send(target, text, [opts])`
-Sends an IM to `target` (user or channel, id or name) with the `text`. `opts` is additional parameters to be sent with the request. Uses `.api()`. Alias: `.msg`
+#### `.send(target, text, [opts])` or `.send(target, opts)`
+Sends an IM to `target` (user or channel, id or name) with the `text`/`opts`. `opts` is [additional parameters to be sent with the request](https://api.slack.com/docs/message-formatting). Uses `.api()`. Alias: `.msg`
 
 #### `.sendAs(bot_name, bot_icon, target, text)`
 Sends an IM as `bot_name` with `bot_icon` to `target` with `text`. Alias: `.msgAs`

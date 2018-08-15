@@ -126,7 +126,8 @@ const Slack = {
 		});
 	},
 	send : (target, text, opts)=>{
-		target = target.channel_id || target
+		target = target.channel_id || target;
+		if(typeof text !== 'string') opts = text;
 		const directMsg = _.findKey(Slack.dms, (user)=>target == user);
 		return Slack.api('chat.postMessage', _.assign({
 			channel    : (directMsg || target),
