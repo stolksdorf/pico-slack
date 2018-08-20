@@ -58,12 +58,12 @@ const log = (color, ...args)=>{
 		channel    : Slack.log_channel,
 		username   : Slack.bot.name,
 		icon_emoji : Slack.bot.icon,
-		attachments: JSON.stringify([{
+		attachments: [{
 			color     : color,
 			text      : '```' + text.join(', ') + '```',
 			mrkdwn_in : ['text'],
 			footer : `${info.file}:${info.line} from ${info.name}`
-		}])
+		}]
 	}).catch(()=>{})
 };
 
@@ -115,6 +115,7 @@ const Slack = {
 		Slack.socket.close(()=>resolve())
 	}),
 	api : (command, payload) => {
+		if(payload && payload.attachments) payload.attachments = JSON.stringify(payload.attachments);
 		return new Promise((resolve, reject)=>{
 			request
 				.get(`https://slack.com/api/${command}`)
@@ -127,7 +128,10 @@ const Slack = {
 	},
 	send : (target, text, opts)=>{
 		target = target.channel_id || target;
-		if(typeof text !== 'string') opts = text;
+		if(typeof text !== 'string'){
+			opts = text;
+			text = '';
+		}
 		const directMsg = _.findKey(Slack.dms, (user)=>target == user);
 		return Slack.api('chat.postMessage', _.assign({
 			channel    : (directMsg || target),
