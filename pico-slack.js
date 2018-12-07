@@ -48,10 +48,10 @@ const log = (color, ...args)=>{
 	const err = args.find((arg) =>arg instanceof Error);
 	const caller = err ? err.stack[0] : (new Error()).stack[1];
 	const info = {
-		name : caller.getFunctionName(),
-		file : caller.getFileName(),
-		line : caller.getLineNumber(),
-		col  : caller.getColumnNumber(),
+		name : caller.getFunctionName && caller.getFunctionName(),
+		file : caller.getFileName && caller.getFileName(),
+		line : caller.getLineNumber && caller.getLineNumber(),
+		col  : caller.getColumnNumber && caller.getColumnNumber(),
 	};
 	Error.prepareStackTrace = cache;
 	return Slack.api('chat.postMessage', {
