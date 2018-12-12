@@ -163,8 +163,20 @@ Slack.msgHas('Hey there!', 'hey', 'champ') -> false
 Slack.msgHas('Hey cool guy', ['greetings', 'hey'], ['scott', 'cool guy']) -> true
 ```
 
+#### `.talkingToMe(msg)`
+
+`talkingToMe` returns true if `msg` is a direct message, or mentions the Slack instance by name or @reference.
+
+#### `.reply(msg, text, opts)`
+
+`reply` will reply to a message in context.  If `msg` is part of a thread, it will send `text` to the thread.  Otherwise, it will send `text` to the same channel as `msg`.
+
+#### `.thread(msg, text, opts)`
+
+`thread` will send `text` to the same thread as `msg`.  If `msg` is not part of a thread, `thread` will use `msg` as the parent.
 
 ### test
+
 Add a file called `./tests/slack_token.json`, that has your slack token for the bot.
 ```
 {

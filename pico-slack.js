@@ -128,17 +128,13 @@ const Slack = {
 	},
 	send : (target, text, opts)=>{
 		target = target.channel_id || target;
-		if(typeof text !== 'string'){
-			opts = text;
-			text = '';
-		}
+		text = typeof text === 'string' ? { text } : text;
 		const directMsg = _.findKey(Slack.dms, (user)=>target == user);
 		return Slack.api('chat.postMessage', _.assign({
 			channel    : (directMsg || target),
-			text       : text,
 			username   : Slack.bot.name,
 			icon_emoji : Slack.bot.icon
-		}, opts))
+		}, text, opts));
 	},
 	sendAs : (botname, boticon, target, text)=>Slack.send(target, text, {username: botname, icon_emoji:`:${_.replace(boticon, /:/g, '')}:`}),
 	react : (msg, emoji)=>{
@@ -174,6 +170,19 @@ const Slack = {
 			return _.some(opts, (opt)=>msg.indexOf(opt.toLowerCase()) !== -1)
 		});
 	},
+	talkingToMe : (msg)=>{
+		return msg.isDirect || Slack.msgHas(msg.text, [Slack.bot.id, Slack.bot.name]);
+	},
+	reply: (msg, text, opts = {})=>{
+		if(msg.ts && msg.thread_ts && msg.thread_ts !== msg.ts) {
+			opts.thread_ts = opts.thread_ts;
+		}
+		Slack.reply(msg.channel, text, opts);
+	},
+	thread: (msg, text, opts = {})=>{
+		opts.thread_ts = msg.thread_ts || msg.ts;
+		Slack.reply(msg.channel, text, opts);
+	}
 };
 
 //Aliases
