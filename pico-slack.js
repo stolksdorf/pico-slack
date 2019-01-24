@@ -1,6 +1,5 @@
 const request = require('superagent');
 const _ = require('lodash');
-const path = require('path');
 const WebSocket = require('ws');
 const Events = require('events');
 
@@ -34,6 +33,7 @@ const processIncomingEvent = (msg)=>{
 		res.isDirect = true;
 		res.channel = res.channel_id;
 	}
+	res.isTalkingToBot = res.isDirect || Slack.msgHas(res.text, [Slack.bot.id, Slack.bot.name]);
 	return res;
 };
 const log = (color, ...args)=>{
@@ -144,9 +144,15 @@ const Slack = {
 			timestamp : msg.ts
 		});
 	},
-	ping : ()=>{
-		pingCount++;
-		Slack.socket.send(JSON.stringify({id: pingCount, type : 'ping'}));
+	reply: (msg, text, opts = {})=>{
+		if(msg.ts && msg.thread_ts && msg.thread_ts !== msg.ts) {
+			opts.thread_ts = msg.thread_ts;
+		}
+		return Slack.send(msg.channel, text, opts);
+	},
+	thread: (msg, text, opts = {})=>{
+		opts.thread_ts = msg.thread_ts || msg.ts;
+		return Slack.send(msg.channel, text, opts);
 	},
 
 	emitter   : new Events(),
@@ -170,19 +176,11 @@ const Slack = {
 			return _.some(opts, (opt)=>msg.indexOf(opt.toLowerCase()) !== -1)
 		});
 	},
-	talkingToMe : (msg)=>{
-		return msg.isDirect || Slack.msgHas(msg.text, [Slack.bot.id, Slack.bot.name]);
+	ping : ()=>{
+		pingCount++;
+		Slack.socket.send(JSON.stringify({id: pingCount, type : 'ping'}));
 	},
-	reply: (msg, text, opts = {})=>{
-		if(msg.ts && msg.thread_ts && msg.thread_ts !== msg.ts) {
-			opts.thread_ts = opts.thread_ts;
-		}
-		Slack.reply(msg.channel, text, opts);
-	},
-	thread: (msg, text, opts = {})=>{
-		opts.thread_ts = msg.thread_ts || msg.ts;
-		Slack.reply(msg.channel, text, opts);
-	}
+
 };
 
 //Aliases

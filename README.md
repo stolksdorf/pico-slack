@@ -60,6 +60,12 @@ Sends an IM as `bot_name` with `bot_icon` to `target` with `text`. Alias: `.msgA
 #### `.react(event_object, emoji)`
 Reacts to a given message with the `emoji`. This function uses the channel id and timestamp from the provided `event_object` to make the API call. It's best to jst pass the `event_object` you get from a handler.
 
+#### `.reply(msg, text, opts)`
+`reply` will reply to a message in context.  If `msg` is part of a thread, it will send `text` to the thread.  Otherwise, it will send `text` to the same channel as `msg`.
+
+#### `.thread(msg, text, opts)`
+`thread` will send `text` to the same thread as `msg`.  If `msg` is not part of a thread, `thread` will use `msg` as the parent.
+
 
 ### events
 
@@ -88,7 +94,12 @@ Access tot he websocket communicating with Slack.
   team: 'T0000000',
   channel_id: 'C0VL784KT',
   user_id: 'U0VL783MX',
-  isDirect : false
+
+  //true if direct message
+  isDirect : false,
+
+  //true if `msg` is a direct message, or mentions the Slack instance by name or @reference.
+  isTalkingToBot : false,
 }
 ```
 
@@ -163,17 +174,6 @@ Slack.msgHas('Hey there!', 'hey', 'champ') -> false
 Slack.msgHas('Hey cool guy', ['greetings', 'hey'], ['scott', 'cool guy']) -> true
 ```
 
-#### `.talkingToMe(msg)`
-
-`talkingToMe` returns true if `msg` is a direct message, or mentions the Slack instance by name or @reference.
-
-#### `.reply(msg, text, opts)`
-
-`reply` will reply to a message in context.  If `msg` is part of a thread, it will send `text` to the thread.  Otherwise, it will send `text` to the same channel as `msg`.
-
-#### `.thread(msg, text, opts)`
-
-`thread` will send `text` to the same thread as `msg`.  If `msg` is not part of a thread, `thread` will use `msg` as the parent.
 
 ### test
 
