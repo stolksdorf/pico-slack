@@ -1,9 +1,7 @@
 # 💬 pico-slack
-
-[![NPM](https://nodei.co/npm/pico-slack.png)](https://nodei.co/npm/pico-slack/)
-
 An incredibly tiny Slack bot library
 
+[![NPM](https://nodei.co/npm/pico-slack.png)](https://nodei.co/npm/pico-slack/)
 
 
 ## install
@@ -22,13 +20,13 @@ Slack.bot.name = 'greetingsbot';
 Slack.bot.icon = 'wave';
 
 Slack.connect('xoxb-00000000000-xxxxxxxxxxxxxxxxxxxx')
-  .then(()=>Slack.send('general', 'hello world!'))
+    .then(()=>Slack.send('general', 'hello world!'))
 
 Slack.onMessage((msg)=>{
-  if(Slack.msgHas(msg.text, ['hey', 'hello'])){
-    Slack.react(msg, 'wave');
-    Slack.thread(msg, `Right back at you ${msg.user}!`);
-  }
+    if(Slack.msgHas(msg.text, ['hey', 'hello'])){
+        Slack.react(msg, 'wave');
+        Slack.thread(msg, `Right back at you ${msg.user}!`);
+    }
 });
 ```
 
@@ -65,20 +63,20 @@ It uses the [`chat.postMessage`](https://api.slack.com/methods/chat.postMessage)
 
 ```js
 Slack.onMessage((msg)=>{
-  Slack.send(msg, 'yo!'); //Sends to the same channel as the incoming message
+    Slack.send(msg, 'yo!'); //Sends to the same channel as the incoming message
 
-  Slack.send('cool-things-channel', 'complex message', {
-    attachments : [{
-      "color": "#2eb886",
-      "fields": [
-        {
-          "title": "Priority",
-          "value": "High",
-          "short": false
-        }
-      ],
-    }]
-  });
+    Slack.send('cool-things-channel', 'complex message', {
+        attachments : [{
+            "color": "#2eb886",
+            "fields": [
+                {
+                    "title": "Priority",
+                    "value": "High",
+                    "short": false
+                }
+            ],
+        }]
+    });
 });
 ```
 
@@ -89,9 +87,9 @@ It uses the [`chat.postMessage`](https://api.slack.com/methods/chat.postMessage)
 
 ```js
 Slack.onMessage((msg)=>{
-  if(Slack.has(msg, 'start a thread here!')){
-    Slack.thread(msg, 'can do!');
-  }
+    if(Slack.has(msg, 'start a thread here!')){
+        Slack.thread(msg, 'can do!');
+    }
 });
 ```
 #### `.react(event, emoji/emojis)`
@@ -99,16 +97,16 @@ Reacts to an event with the provided `emoji`. The `emoji` can be wrapped in `:` 
 
 ```js
 const movieVote = async (movieName)=>{
-  return Slack.send('general', `What did everyone think of ${movieName}?`)
-    .then((movieMsg)=>{
-      return Slack.react(movieMsg, ['thumbsdown', ':thumbsup:', ':fire:'])
-    })
+    return Slack.send('general', `What did everyone think of ${movieName}?`)
+        .then((movieMsg)=>{
+            return Slack.react(movieMsg, ['thumbsdown', ':thumbsup:', ':fire:'])
+        })
 }
 
 Slack.onMessage((msg)=>{
-  if(Slack.has(msg, ['turtle', 'slow'])){
-    Slack.react(msg, 'turtle');
-  }
+    if(Slack.has(msg, ['turtle', 'slow'])){
+        Slack.react(msg, 'turtle');
+    }
 });
 ```
 
@@ -123,20 +121,20 @@ The event object is generated from [Slack's RTM events](https://api.slack.com/ev
 
 ```js
 {
-  type        : 'message',
-  text        : 'test message',
+    type        : 'message',
+    text        : 'test message',
 
-  user        : 'scott',
-  user_id     : 'U0VL783MX',
-  channel     : 'general',
-  channel_id  : 'C0VL784KT',
+    user        : 'scott',
+    user_id     : 'U0VL783MX',
+    channel     : 'general',
+    channel_id  : 'C0VL784KT',
 
-  event_ts    : '1564019772.001300',
-  ts          : '1564019772.001300',
-  team        : 'T0VKSC1BN',
+    event_ts    : '1564019772.001300',
+    ts          : '1564019772.001300',
+    team        : 'T0VKSC1BN',
 
-  mentionsBot : false,  //true if the event is in a DM with the bot, or mentions the bot's name
-  isDirect    : false,  //true if the event is in a DM
+    mentionsBot : false,  //true if the event is in a DM with the bot, or mentions the bot's name
+    isDirect    : false,  //true if the event is in a DM
 };
 ```
 
@@ -152,9 +150,9 @@ Creates a handler for all `message` events. Most common way to interact with `pi
 
 ```js
 Slack.onMessage((msg)=>{
-  if(Slack.has(msg, ['turtle', 'slow'])){
-    Slack.react(msg, 'turtle');
-  }
+    if(Slack.has(msg, ['turtle', 'slow'])){
+        Slack.react(msg, 'turtle');
+    }
 });
 ```
 
@@ -163,9 +161,9 @@ Creates a handler for all `reaction_added` events. If you also want to listen fo
 
 ```js
 Slack.onReact((event)=>{
-  if(event.reaction === 'ice_cream'){
-    Slack.send(event, 'Yes please!');
-  }
+    if(event.reaction === 'ice_cream'){
+        Slack.send(event, 'Yes please!');
+    }
 });
 ```
 
@@ -174,7 +172,7 @@ Same as `.onMessage()` but only fires for specific channels.
 
 ```js
 Slack.onChannelMessage('super-secret', (event)=>{
-  Slack.react(event, 'shushing_face');
+    Slack.react(event, 'shushing_face');
 });
 ```
 
@@ -183,7 +181,7 @@ Creates a handler for **any** [Slack event](https://api.slack.com/events).
 
 ```js
 Slack.onEvent('user_typing', (event)=>{
-  Slack.send(event, `Watcha typing ${event.user}???`);
+    Slack.send(event, `Watcha typing ${event.user}???`);
 });
 ```
 
@@ -202,24 +200,24 @@ When `pico-slack` connects, Slack returns a massive dump of all the team informa
 Slack.connected = true
 Slack.info = {], // Raw dump of all Slack team info
 Slack.channels = {
-   C0VL2BUUX: 'diagnostics',
-   C0VL784KT: 'general',
+     C0VL2BUUX: 'diagnostics',
+     C0VL784KT: 'general',
 }
 Slack.users = {
-   U0VKSFTB6: 'higgins',
-   U0VL783MX: 'scott'
+     U0VKSFTB6: 'higgins',
+     U0VL783MX: 'scott'
 }
 Slack.bots = {
-   B0VKVBSQ6: 'U0VKSFTB6',
+     B0VKVBSQ6: 'U0VKSFTB6',
 }
 Slack.dms = {
-   scott: 'D0VKSFTBN',
-   slackbot: 'D0VLD2KGA'
+     scott: 'D0VKSFTBN',
+     slackbot: 'D0VLD2KGA'
 }
 Slack.bot = {
-   id: 'U0VKSFTB6',
-   name: 'higgins',
-   icon: ':robot_face:'
+     id: 'U0VKSFTB6',
+     name: 'higgins',
+     icon: ':robot_face:'
 }
 ```
 
@@ -254,13 +252,13 @@ Slack.has('Hey cool guy', ['greetings', /* OR */ 'hey'], /* AND */ 'cool guy') =
 Slack.has('Hey there!', 'hey') == true //case insensitive
 
 Slack.onMessage((event)=>{
-  if(Slack.has(event, ['get', 'grab', 'pick up'], ['lunch', 'food', 'grub'])){
-    /* Matches:
-      'hey, wanna grab some grub?'
-      'Anyone want to pick up some lunch?'
-      'FOOD! ME GET FOOD!'
-    */
-  }
+    if(Slack.has(event, ['get', 'grab', 'pick up'], ['lunch', 'food', 'grub'])){
+        /* Matches:
+            'hey, wanna grab some grub?'
+            'Anyone want to pick up some lunch?'
+            'FOOD! ME GET FOOD!'
+        */
+    }
 })
 ```
 
@@ -269,9 +267,9 @@ Direct access to [Slack's API](https://api.slack.com/methods). Automatically app
 
 ```js
 Slack.api('channels.history', { channel : 'C0VL784KT', count : 5})
-  .then((result)=>{
-    //Fetches the 5 most recent messages from the channel
-  });
+    .then((result)=>{
+        //Fetches the 5 most recent messages from the channel
+    });
 ```
 
 #### `.alias(bot_name, icon_emoji)` -> pico-slack instance
@@ -281,7 +279,7 @@ Returns an aliased instance with a different bot name and icon. Useful for makin
 const TriviaBot = Slack.alias('triviabot', 'dice');
 
 TriviaBot.onMessage((msg)=>{
-  TriviaBot.send(msg, 'Hey!');
+    TriviaBot.send(msg, 'Hey!');
 });
 ```
 
@@ -312,8 +310,8 @@ const BotLoader = require('pico-slack/bot-loader.js');
 
 
 Slack.connect()
-  .then(()=>Botloader('./bots'))
-  .then((bots)=>{
-    console.log(bots);
-  })
+    .then(()=>Botloader('./bots'))
+    .then((bots)=>{
+        console.log(bots);
+    })
 ```
