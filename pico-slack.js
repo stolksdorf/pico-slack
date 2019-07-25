@@ -19,7 +19,6 @@ const sequence = async (obj, fn)=>Object.keys(obj).reduce((a, key)=>a.then((r)=>
 const processTeamInfo = (teamInfo)=>{
 	Slack.info = teamInfo;
 	Slack.bot.id = teamInfo.self.id;
-	Slack.bot.name = teamInfo.self.name;
 
 	map(teamInfo.users,   (user)=>{
 		if(user.deleted == true || !user.profile) return;
