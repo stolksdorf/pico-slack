@@ -1,191 +1,233 @@
 const request = require('superagent');
-const _ = require('lodash');
 const WebSocket = require('ws');
 const Events = require('events');
+const path = require('path');
 
-let pingCount = 0;
+let pingTimer;
+const startPing = (id = 0)=>{
+	if(!Slack.connected) return;
+	Slack.socket.send(JSON.stringify({ id, type : 'ping' }));
+	pingTimer = setTimeout(()=>startPing(id++), 5000);
+};
 
-const processTeamData = (teamData)=>{
-	Slack.bot.id = teamData.self.id;
-	_.each(teamData.channels, (channel)=>{ Slack.channels[channel.id] = channel.name; });
-	_.each(teamData.groups,   (channel)=>{ Slack.channels[channel.id] = channel.name; });
-	_.each(teamData.users,    (user)   =>{
+const map = (obj, fn)=>Object.keys(obj).map((key)=>fn(obj[key], key));
+const findKey = (obj, fn)=>Object.keys(obj).find((key)=>fn(obj[key], key));
+const wait = async (n, val)=>new Promise((r)=>setTimeout(()=>r(val), n));
+const sequence = async (obj, fn)=>Object.keys(obj).reduce((a, key)=>a.then((r)=>fn(obj[key], key, r)), Promise.resolve());
+
+//https://api.slack.com/methods/rtm.start
+const processTeamInfo = (teamInfo)=>{
+	Slack.info = teamInfo;
+	Slack.bot.id = teamInfo.self.id;
+	Slack.bot.name = teamInfo.self.name;
+
+	map(teamInfo.users,   (user)=>{
+		if(user.deleted == true || !user.profile) return;
 		Slack.users[user.id] = user.name;
 		if(user.profile && user.profile.bot_id) Slack.bots[user.profile.bot_id] = user.id;
 	});
-	_.each(teamData.ims,(im)=>{ Slack.dms[im.id] = Slack.users[im.user]});
-};
 
-const processIncomingEvent = (msg)=>{
-	const res = _.assign({}, msg);
-	res.text = res.text || "";
-	res.channel_id = msg.channel;
-	res.user_id = msg.user;
-	if(msg.bot_id) res.user_id = Slack.bots[msg.bot_id];
+	map(teamInfo.channels, (channel)=>Slack.channels[channel.id] = channel.name);
+	map(teamInfo.groups,   (channel)=>Slack.channels[channel.id] = channel.name);
+	map(teamInfo.ims,      (im)=>Slack.dms[Slack.users[im.user]] = im.id);
 
-	//For reactions
-	if(msg.item && msg.item.channel) res.channel_id = msg.item.channel;
-
-	if(res.channel_id) res.channel = Slack.channels[res.channel_id];
-	if(res.user_id) res.user = Slack.users[res.user_id];
-	if(msg.username) res.user = msg.username;
-	if(res.channel_id && res.channel_id[0] == 'D'){
-		res.isDirect = true;
-		res.channel = res.channel_id;
+	if(!findKey(Slack.channels, (name, id)=>name == Slack.log_channel)){
+		throw `Could not find the channel to send logs to. Either create '#${Slack.log_channel}' or change the log_channel`;
 	}
-	res.isTalkingToBot = res.isDirect || Slack.msgHas(res.text, [Slack.bot.id, Slack.bot.name]);
-	return res;
 };
-const log = (color, ...args)=>{
-	const text = args.map((arg)=>{
-		if(arg instanceof Error) return arg.toString();
-		return JSON.stringify(arg, null, '  ')
-	});
-	console.log(...text);
-	if(!Slack.connected) return;
-	const cache = Error.prepareStackTrace;
-	Error.prepareStackTrace = (_, stack)=>stack;
-	const err = args.find((arg) =>arg instanceof Error);
-	const caller = err ? err.stack[0] : (new Error()).stack[1];
-	const info = {
-		name : caller.getFunctionName && caller.getFunctionName(),
-		file : caller.getFileName && caller.getFileName(),
-		line : caller.getLineNumber && caller.getLineNumber(),
-		col  : caller.getColumnNumber && caller.getColumnNumber(),
-	};
-	Error.prepareStackTrace = cache;
-	return Slack.api('chat.postMessage', {
-		channel    : Slack.log_channel,
-		username   : Slack.bot.name,
-		icon_emoji : Slack.bot.icon,
-		attachments: [{
-			color     : color,
-			text      : '```' + text.join(', ') + '```',
-			mrkdwn_in : ['text'],
-			footer : `${info.file}:${info.line} from ${info.name}`
-		}]
-	}).catch(()=>{})
+
+const handleEvent = (rawData, flags)=>{
+	try {
+		const evt = JSON.parse(rawData);
+		if(evt.error) return Slack.error(evt);
+		const event = processEvent(evt);
+		if(event.user_id === Slack.bot.id) return;
+		Slack.emitter.emit(event.type, event);
+	} catch (err){ Slack.error(err); }
+};
+
+const processEvent = (event)=>{
+	const evt = Object.assign({}, event);
+	evt.text = evt.text || '';
+	evt.channel_id = event.channel;
+	evt.user_id = event.user;
+	if(event.bot_id) evt.user_id = Slack.bots[event.bot_id];
+
+	if(event.item && event.item.channel) evt.channel_id = event.item.channel;
+	if(evt.channel_id) evt.channel = Slack.channels[evt.channel_id];
+	if(evt.user_id) evt.user = Slack.users[evt.user_id];
+	if(event.username) evt.user = event.username;
+	evt.isDirect = false;
+	if(evt.channel_id && evt.channel_id[0] == 'D'){
+		evt.isDirect = true;
+		evt.channel = evt.channel_id;
+	}
+	evt.mentionsBot = evt.isDirect || utils.textHas(evt.text, [Slack.bot.id, Slack.bot.name]);
+	return evt;
+};
+
+const utils = {
+	clean     : (emoji, wrap = ':')=>`${wrap}${emoji.replace(/:/g, '')}${wrap}`,
+	getTarget : (target)=>{
+		let channel, thread_ts;
+		if(typeof target == 'string') channel = Slack.dms[target] || target;
+		if(typeof target == 'object'){
+			channel = target.channel_id || target.channel;
+			thread_ts = (target.message.thread_ts !== target.ts)
+				? target.message.thread_ts
+				: undefined;
+		}
+		return { channel, thread_ts };
+	},
+	textHas : (msg, ...filters)=>{
+		if(!msg) return false;
+		if(msg.text) msg = msg.text;
+		if(typeof msg !== 'string') return false;
+		msg = msg.toLowerCase();
+		return filters.every((options)=>{
+			if(typeof options == 'string') options = [options];
+			return !!options.find((opt)=>msg.indexOf(opt.toLowerCase()) !== -1);
+		});
+	},
+	getTraceMessage : (values)=>{
+		const error = values.find((val)=>val instanceof Error);
+		const stackline = (error)
+			? error.stack.split('\n')[1]
+			: (new Error()).stack.split('\n')[4];
+
+		let name, loc = stackline.replace('at ', '').trim();
+		const res = /(.*?) \((.*?)\)/.exec(loc);
+		if(res){
+			name = res[1];
+			loc = res[2];
+		}
+		const [_, file, line, col] = /(.*?):(\d*):(\d*)/.exec(loc);
+		return `${path.relative(process.cwd(), file)}:${line} from ${name}`;
+	},
+	log : (values = [], opts = {})=>{
+		opts = Object.assign({ logger : console.log }, opts);
+		const value = (Array.isArray(values) && values.length === 1) ? values[0] : values;
+		opts.logger(...values);
+		if(!Slack.connected) return;
+		if(!opts.footer) opts.footer = utils.getTraceMessage(values);
+
+		return Slack.api('chat.postMessage', {
+			channel     : Slack.log_channel,
+			username    : Slack.bot.name,
+			icon_emoji  : utils.clean(Slack.bot.icon),
+			attachments : [{
+				color     : opts.color,
+				text      : `\`\`\`${JSON.stringify(value, null, '  ')}\`\`\``,
+				mrkdwn_in : ['text'],
+				footer    : opts.footer,
+			}],
+		}).catch(()=>{});
+	},
 };
 
 const Slack = {
-	connected : false,
-	token : '',
-	socket : null,
-	pingTimer : null,
+	utils,
+
+	connected   : false,
+	token       : '',
+	socket      : null,
 	log_channel : 'diagnostics',
-	channels : {},
-	users    : {},
-	bots     : {},
-	dms      : {},
-	bot : {
-		id : '',
+	channels    : {},
+	users       : {},
+	bots        : {},
+	dms         : {},
+	bot         : {
+		id   : '',
 		name : 'bot',
-		icon : ':robot_face:'
+		icon : ':robot_face:',
 	},
-	setInfo : (name, icon)=>{
-		Slack.bot.name = name;
-		Slack.bot.icon = `:${_.replace(icon, /:/g, '')}:`
+	has     : utils.textHas,
+	emitter : new Events(),
+
+	onMessage : (handler)=>Slack.emitter.on('message', handler),
+	onReact   : (handler)=>Slack.emitter.on('reaction_added', handler),
+	onConnect : (handler)=>{
+		if(Slack.connected) handler();
+		return Slack.emitter.on('connect', handler);
 	},
-	connect : (token)=>{
+	onChannelMessage : (channel, handler)=>{
+		Slack.emitter.on('message', (event)=>event.channel === channel && handler(event));
+	},
+	onEvent : (eventType, handler)=>Slack.emitter.on(eventType, handler),
+
+	connect : async (token)=>{
 		Slack.token = token;
 		return Slack.api('rtm.start')
-			.then((data) => {
+			.then((data)=>{
 				return new Promise((resolve, reject)=>{
-					if (!data.ok || !data.url) return reject(`bad access token`);
-					processTeamData(data);
+					if(!data.ok || !data.url) return reject(`bad access token`);
+					processTeamInfo(data);
 					Slack.socket = new WebSocket(data.url);
-
 					Slack.socket.on('open', resolve);
-					Slack.socket.on('message', (rawData, flags) => {
-						try{
-							const msg = JSON.parse(rawData);
-							if(msg.error) return Slack.error(msg);
-							const message = processIncomingEvent(msg);
-							if(message.user_id === Slack.bot.id) return;
-							Slack.emitter.emit(message.type, message);
-						}catch(err){ Slack.error(err); }
-					});
+					Slack.socket.on('message', handleEvent);
 				});
 			})
-			.then(()=>Slack.pingTimer=setInterval(Slack.ping, 5000))
-			.then(()=>Slack.connected = true)
+			.then(()=>{
+				Slack.connected = true;
+				Slack.emitter.emit('connect');
+				startPing();
+			});
 	},
-	close : ()=>new Promise((resolve, reject)=>{
-		clearInterval(Slack.pingTimer);
-		Slack.socket.close(()=>resolve())
+	close : async ()=>new Promise((resolve, reject)=>{
+		Slack.socket.close(()=>{
+			Slack.connected = false;
+			return resolve();
+		});
 	}),
-	api : (command, payload) => {
-		if(payload && payload.attachments) payload.attachments = JSON.stringify(payload.attachments);
+	api : async (method, payload = {})=>{
+		if(payload.attachments) payload.attachments = JSON.stringify(payload.attachments);
 		return new Promise((resolve, reject)=>{
-			request
-				.get(`https://slack.com/api/${command}`)
-				.query(_.assign({ token : Slack.token }, payload))
+			request.get(`https://slack.com/api/${method}`)
+				.query({ token : Slack.token, ...payload })
 				.end((err, res)=>{
 					if(err || (res.body && res.body.ok === false)) return reject(err || res.body.error);
 					return resolve(res.body);
 				});
 		});
 	},
-	send : (target, text, opts)=>{
-		target = target.channel_id || target;
-		text = typeof text === 'string' ? { text } : text;
-		const directMsg = _.findKey(Slack.dms, (user)=>target == user);
-		return Slack.api('chat.postMessage', _.assign({
-			channel    : (directMsg || target),
-			username   : Slack.bot.name,
-			icon_emoji : Slack.bot.icon
-		}, text, opts));
+	alias : (username, icon_emoji)=>{
+		return {
+			...Slack,
+			send   : (target, text, opts)=>Slack.send(target, text, { ...opts, username, icon_emoji }),
+			thread : (target, text, opts)=>Slack.thread(target, text, { ...opts, username, icon_emoji }),
+		};
 	},
-	sendAs : (botname, boticon, target, text)=>Slack.send(target, text, {username: botname, icon_emoji:`:${_.replace(boticon, /:/g, '')}:`}),
-	react : (msg, emoji)=>{
+	send : async (target, text, opts = {})=>{
+		return Slack.api('chat.postMessage', {
+			...utils.getTarget(target),
+			...opts,
+			text,
+			username   : opts.username || Slack.bot.name,
+			icon_emoji : utils.clean(opts.icon_emoji || Slack.bot.icon),
+		});
+	},
+	thread : async (event, text, opts = {})=>{
+		if(!event.thread_ts && !event.ts) throw `Can not start thread from event`;
+		return Slack.send(event.channel, text, {
+			...opts,
+			thread_ts : event.thread_ts || event.ts,
+		});
+	},
+	react : async (event, emoji)=>{
+		if(!event.ts) throw `Can not react to this event`;
+		if(Array.isArray(emoji)) return sequence(emoji, (icon)=>Slack.react(event, icon).then(()=>wait(300)));
 		return Slack.api('reactions.add', {
-			channel   : msg.channel_id || msg.channel,
-			name      : _.replace(emoji, /:/g, ''),
-			timestamp : msg.ts
+			channel   : event.channel_id || event.channel,
+			name      : utils.clean(emoji, ''),
+			timestamp : event.ts,
 		});
 	},
-	reply: (msg, text, opts = {})=>{
-		if(msg.ts && msg.thread_ts && msg.thread_ts !== msg.ts) {
-			opts.thread_ts = msg.thread_ts;
-		}
-		return Slack.send(msg.channel, text, opts);
-	},
-	thread: (msg, text, opts = {})=>{
-		opts.thread_ts = msg.thread_ts || msg.ts;
-		return Slack.send(msg.channel, text, opts);
-	},
-
-	emitter   : new Events(),
-	onMessage : (handler)=>Slack.emitter.on('message', handler),
-	onReact   : (handler)=>Slack.emitter.on('reaction_added', handler),
-
-	log   : log.bind(null, ''),
-	debug : log.bind(null, '#3498db'),
-	info  : log.bind(null, 'good'),
-	warn  : log.bind(null, 'warning'),
-	error : log.bind(null, 'danger'),
-
-	//Utils
-	msgHas : (msg, ...filters)=>{
-		if(!msg) return false;
-		if(msg.text) msg = msg.text;
-		if(!_.isString(msg)) return false;
-		msg = msg.toLowerCase();
-		return _.every(filters, (opts)=>{
-			if(_.isString(opts)) opts = [opts];
-			return _.some(opts, (opt)=>msg.indexOf(opt.toLowerCase()) !== -1)
-		});
-	},
-	ping : ()=>{
-		pingCount++;
-		Slack.socket.send(JSON.stringify({id: pingCount, type : 'ping'}));
-	},
-
+	log   : (...args)=>utils.log(args, { color : 'good' }),
+	error : (...errs)=>utils.log(errs, { color : 'danger', logger : console.error }),
 };
 
-//Aliases
-Slack.msg   = Slack.send;
-Slack.msgAs = Slack.sendAs;
-
+/** Aliases **/
+Slack.onMsg = Slack.onMessage;
+Slack.onChannelMsg = Slack.onChannelMessage;
 
 module.exports = Slack;
