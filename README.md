@@ -23,7 +23,7 @@ Slack.connect('xoxb-00000000000-xxxxxxxxxxxxxxxxxxxx')
     .then(()=>Slack.send('general', 'hello world!'))
 
 Slack.onMessage((msg)=>{
-    if(Slack.msgHas(msg.text, ['hey', 'hello'])){
+    if(Slack.has(msg.text, ['hey', 'hello'])){
         Slack.react(msg, 'wave');
         Slack.thread(msg, `Right back at you ${msg.user}!`);
     }
