@@ -38,7 +38,7 @@ Slack.onMessage((msg)=>{
 - handles all ping events and keeping the connection alive
 - simplifies interface to the most common slack tasks
 - provides advanced error reporting and logging right into slack with smart stack traces
-- comes with an optional [bot loader](#bot_loader) to easily load in several bot scripts
+- comes with an optional [bot loader](#bot-loader) to easily load in several bot scripts
 - **under 250 lines!**
 
 
