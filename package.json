@@ -1,8 +1,12 @@
 {
   "name": "pico-slack",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "An incredibly tiny Slack bot library",
   "main": "pico-slack.js",
+  "files": [
+     "pico-slack.js",
+     "bot-loader.js"
+  ],
   "scripts": {
     "test": "pico-check",
     "dev": "nodemon tests/test.server.js"
