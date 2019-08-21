@@ -89,6 +89,7 @@ const utils = {
 		});
 	},
 	getTraceMessage : (values)=>{
+		if(!Array.isArray(values)) values = [values];
 		const error = values.find((val)=>val instanceof Error);
 		const stackline = (error)
 			? error.stack.split('\n')[1]

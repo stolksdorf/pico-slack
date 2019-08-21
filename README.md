@@ -293,7 +293,7 @@ Exact same as `.log()` except it uses `console.error()` instead of `console.log(
 
 
 
-## bot loader
+## `botloader([opts={}])`
 One of the most common ways to use `pico-slack` is to set up a "multi-bot". A single slack bot for your team but each of it's functions are separated into smaller micro-bots.
 
 This is very useful if you want to make something simple, like a bot to check if a website it up and message a channel if it's not. A person on your team can add a `uptime.bot.js` to your bot witha  small script and you are good to go.
@@ -301,17 +301,53 @@ This is very useful if you want to make something simple, like a bot to check if
 What does the bot loader do:
 - Iterates through a folder and all sub-folders to find all files named `*.bot.js`.
 - `require`s and loads them. If any experience errors of syntax issues, they will be caught and logged with `.error()`
-- returns an array with an object for each bot; it's name, path, return value and/or error objects.
 - sets up listeners for `unhandledRejection` and `uncaughtException`, and will log them with stack traces.
+- returns an array with an object for each bot; it's name, path, return value and/or error objects.
+
+#### opts
+All opts will be passed through to the internal reference to [`glob`](https://www.npmjs.com/package/glob).
 
 ```js
+//defaults
+
+Botloader({
+    pattern : '**/*.bots.js',
+    ignore  : '**/disabled/**' //will ignore any bots in a folder called 'disabled'
+})
+```
+
+
+
+
+
+```js
+const express = require('express');
+const app = express();
 const Slack = require('pico-slack');
 const BotLoader = require('pico-slack/bot-loader.js');
 
-
+//If a bot returns an express router, load it.
 Slack.connect()
     .then(()=>Botloader('./bots'))
     .then((bots)=>{
-        console.log(bots);
+        bots.map((bot)=>{
+            if(Object.getPrototypeOf(bot.result) == express.Router){
+                app.use(bot.result);
+            }
+        })
     })
+    .then(()=>app.listen(8000))
+    .then(()=>console.log('test server running: localhost:8000'));
+```
+
+```js
+result_bots = [
+    {
+        name   : 'test',
+        path   : 'C:/pico-slack/bots/test.bot.js',
+        result : {},
+        error  : null
+    },...
+]
+
 ```

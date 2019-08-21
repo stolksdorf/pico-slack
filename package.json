@@ -1,6 +1,6 @@
 {
   "name": "pico-slack",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "description": "An incredibly tiny Slack bot library",
   "main": "pico-slack.js",
   "scripts": {
@@ -29,5 +29,8 @@
   "devDependencies": {
     "express": "^4.17.1",
     "pico-check": "^1.2.2"
+  },
+  "optionalDependencies": {
+    "glob": "^7.1.4"
   }
 }

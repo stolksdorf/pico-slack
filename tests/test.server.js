@@ -11,7 +11,7 @@ Slack.log_channel = 'general';
 Slack.connect(config.token)
 	.then(()=>BotLoader('./tests/bots'))
 	.then((bots)=>{
-		//console.log(bots);
+		console.log(bots);
 		return bots.map((bot)=>bot.result && app.use(bot.result));
 	})
 	.then(()=>app.listen(8000))

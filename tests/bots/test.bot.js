@@ -2,7 +2,7 @@ const Slack = require('../../pico-slack.js');
 
 
 Slack.onConnect(async ()=>{
-	console.log(Slack);
+	//console.log(Slack);
 
 	const testbot = Slack.alias('testbot', 'mega');
 
