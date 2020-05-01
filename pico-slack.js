@@ -7,7 +7,7 @@ let pingTimer;
 const startPing = (id = 0)=>{
 	if(!Slack.connected) return;
 	Slack.socket.send(JSON.stringify({ id, type : 'ping' }));
-	pingTimer = setTimeout(()=>startPing(id++), 5000);
+	pingTimer = setTimeout(()=>startPing(++id), 5000);
 };
 
 const map = (obj, fn)=>Object.keys(obj).map((key)=>fn(obj[key], key));
