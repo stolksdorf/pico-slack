@@ -56,7 +56,7 @@ const processEvent = (event)=>{
 	if(evt.channel_id) evt.channel = Slack.channels[evt.channel_id];
 	if(evt.user_id) evt.user = Slack.users[evt.user_id];
 	if(event.username) evt.user = event.username;
-	evt.isPrivate = evt.channel_id[0] == 'G';
+	evt.isPrivate = evt.channel_id && evt.channel_id[0] == 'G';
 	evt.isDirect = false;
 	if(evt.channel_id && evt.channel_id[0] == 'D'){
 		evt.isDirect = true;
