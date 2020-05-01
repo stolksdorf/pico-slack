@@ -66,6 +66,25 @@ const processEvent = (event)=>{
 	return evt;
 };
 
+const handleSocketClose = ()=>{
+	if (Slack.closing) return; // Socket was closed intentionally.
+
+	Slack.connected = false;
+	if (!Slack.autoReconnect) {
+		Slack.error('WebSocket closed unexpectedly!');
+		return;
+	}
+
+	Slack.warn('WebSocket closed unexpectedly, trying to reconnect...');
+	return Slack.connect(Slack.token)
+		.then(()=>Slack.log('Reconnected!'))
+		.catch((err)=>Slack.error(`Failed to reconnect: ${err}`, err));
+};
+
+const handleSocketError = (err)=>{
+	Slack.error(`Slack socket error: ${err}`, err);
+};
+
 const utils = {
 	clean     : (emoji, wrap = ':')=>`${wrap}${emoji.replace(/:/g, '')}${wrap}`,
 	getTarget : (target)=>{
@@ -129,15 +148,17 @@ const utils = {
 const Slack = {
 	utils,
 
-	connected   : false,
-	token       : '',
-	socket      : null,
-	log_channel : 'diagnostics',
-	channels    : {},
-	users       : {},
-	bots        : {},
-	dms         : {},
-	bot         : {
+	connected     : false,
+	closing       : false,
+	token         : '',
+	socket        : null,
+	log_channel   : 'diagnostics',
+	autoReconnect : false,
+	channels      : {},
+	users         : {},
+	bots          : {},
+	dms           : {},
+	bot           : {
 		id   : '',
 		name : 'bot',
 		icon : ':robot_face:',
@@ -166,6 +187,8 @@ const Slack = {
 					Slack.socket = new WebSocket(data.url);
 					Slack.socket.on('open', resolve);
 					Slack.socket.on('message', handleEvent);
+					Slack.socket.on('close', handleSocketClose);
+					Slack.socket.on('error', handleSocketError);
 				});
 			})
 			.then(()=>{
@@ -175,8 +198,10 @@ const Slack = {
 			});
 	},
 	close : async ()=>new Promise((resolve, reject)=>{
+		Slack.closing = true;
 		Slack.socket.close(()=>{
 			Slack.connected = false;
+			Slack.closing = false;
 			return resolve();
 		});
 	}),
@@ -224,6 +249,7 @@ const Slack = {
 		});
 	},
 	log   : (...args)=>utils.log(args, { color : 'good' }),
+	warn  : (...args)=>utils.log(args, { color : 'warning', logger : console.warn }),
 	error : (...errs)=>utils.log(errs, { color : 'danger', logger : console.error }),
 };
 
