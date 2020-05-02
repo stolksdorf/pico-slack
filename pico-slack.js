@@ -67,22 +67,18 @@ const processEvent = (event)=>{
 };
 
 const handleSocketClose = ()=>{
-	if (Slack.closing) return; // Socket was closed intentionally.
-
 	Slack.connected = false;
-	if (!Slack.autoReconnect) {
-		Slack.error('WebSocket closed unexpectedly!');
-		return;
+	
+	// Only auto-reconnect if we are not _intentionally_ closing the connection.
+	if (!Slack.closing) {
+		if (Slack.autoReconnect) reconnect();
+		else Slack.emitter.emit('error', new Error('WebSocket closed unexpectedly!'));
 	}
-
-	Slack.warn('WebSocket closed unexpectedly, trying to reconnect...');
-	return Slack.connect(Slack.token)
-		.then(()=>Slack.log('Reconnected!'))
-		.catch((err)=>Slack.error(`Failed to reconnect: ${err}`, err));
 };
 
-const handleSocketError = (err)=>{
-	Slack.error(`Slack socket error: ${err}`, err);
+const reconnect = ()=>{
+	return Slack.connect(Slack.token)
+		.catch((err) => Slack.emitter.emit('error', err));
 };
 
 const utils = {
@@ -175,6 +171,7 @@ const Slack = {
 	onChannelMessage : (channel, handler)=>{
 		Slack.emitter.on('message', (event)=>event.channel === channel && handler(event));
 	},
+	onError : (handler)=>Slack.emitter.on('error', handler),
 	onEvent : (eventType, handler)=>Slack.emitter.on(eventType, handler),
 
 	connect : async (token)=>{
@@ -188,7 +185,7 @@ const Slack = {
 					Slack.socket.on('open', resolve);
 					Slack.socket.on('message', handleEvent);
 					Slack.socket.on('close', handleSocketClose);
-					Slack.socket.on('error', handleSocketError);
+					Slack.socket.on('error', (err)=>Slack.emitter.emit('error', err));
 				});
 			})
 			.then(()=>{
@@ -200,7 +197,6 @@ const Slack = {
 	close : async ()=>new Promise((resolve, reject)=>{
 		Slack.closing = true;
 		Slack.socket.close(()=>{
-			Slack.connected = false;
 			Slack.closing = false;
 			return resolve();
 		});
