@@ -39,6 +39,7 @@ const handleEvent = (rawData, flags)=>{
 	try {
 		const evt = JSON.parse(rawData);
 		if(evt.error) return Slack.error(evt);
+		if(evt.type === 'goodbye') return reconnect();
 		const event = processEvent(evt);
 		if(event.user_id === Slack.bot.id) return;
 		Slack.emitter.emit(event.type, event);
@@ -76,9 +77,14 @@ const handleSocketClose = ()=>{
 	}
 };
 
-const reconnect = ()=>{
-	return Slack.connect(Slack.token)
-		.catch((err) => Slack.emitter.emit('error', err));
+const reconnect = async ()=>{
+	try {
+		// Ensure the old socket is closed first, so it doesn't emit any confusing events once we have a new socket.
+		await Slack.close();
+		await Slack.connect(Slack.token);
+	} catch (err) {
+		Slack.emitter.emit('error', err);
+	}
 };
 
 const utils = {
