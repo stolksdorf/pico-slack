@@ -68,19 +68,14 @@ const processEvent = (event)=>{
 };
 
 const handleSocketClose = ()=>{
-	Slack.connected = false;
-	
-	// Only auto-reconnect if we are not _intentionally_ closing the connection.
-	if (!Slack.closing) {
-		if (Slack.autoReconnect) reconnect();
-		else Slack.emitter.emit('error', new Error('WebSocket closed unexpectedly!'));
-	}
+	// If the socket disconnects unexpectedly, try to reconnect.
+	if (!Slack.closing) reconnect();
 };
 
 const reconnect = async ()=>{
 	try {
 		// Ensure the old socket is closed first, so it doesn't emit any confusing events once we have a new socket.
-		await Slack.close();
+		if (Slack.connected) await Slack.close();
 		await Slack.connect(Slack.token);
 	} catch (err) {
 		Slack.emitter.emit('error', err);
@@ -150,17 +145,16 @@ const utils = {
 const Slack = {
 	utils,
 
-	connected     : false,
-	closing       : false,
-	token         : '',
-	socket        : null,
-	log_channel   : 'diagnostics',
-	autoReconnect : false,
-	channels      : {},
-	users         : {},
-	bots          : {},
-	dms           : {},
-	bot           : {
+	connected   : false,
+	closing     : false,
+	token       : '',
+	socket      : null,
+	log_channel : 'diagnostics',
+	channels    : {},
+	users       : {},
+	bots        : {},
+	dms         : {},
+	bot         : {
 		id   : '',
 		name : 'bot',
 		icon : ':robot_face:',
@@ -203,6 +197,7 @@ const Slack = {
 	close : async ()=>new Promise((resolve, reject)=>{
 		Slack.closing = true;
 		Slack.socket.close(()=>{
+			Slack.connected = false;
 			Slack.closing = false;
 			return resolve();
 		});
