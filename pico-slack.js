@@ -35,11 +35,11 @@ const processTeamInfo = (teamInfo)=>{
 	}
 };
 
-const handleEvent = (rawData, flags)=>{
+const handleEvent = async (rawData, flags)=>{
 	try {
 		const evt = JSON.parse(rawData);
 		if(evt.error) return Slack.error(evt);
-		if(evt.type === 'goodbye') return reconnect();
+		if(evt.type === 'goodbye') await reconnect();
 		const event = processEvent(evt);
 		if(event.user_id === Slack.bot.id) return;
 		Slack.emitter.emit(event.type, event);
