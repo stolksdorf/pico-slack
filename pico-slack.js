@@ -68,14 +68,17 @@ const processEvent = (event)=>{
 };
 
 const handleSocketClose = ()=>{
+	Slack.connected = false;
+
 	// If the socket disconnects unexpectedly, try to reconnect.
 	if (!Slack.closing) reconnect();
+	else Slack.closing = false;
 };
 
 const reconnect = async ()=>{
 	try {
-		// Ensure the old socket is closed first, so it doesn't emit any confusing events once we have a new socket.
-		if (Slack.connected) await Slack.close();
+		// Ensure the old socket doesn't keep emitting events once we have a new socket.
+		Slack.close();
 		await Slack.connect(Slack.token);
 	} catch (err) {
 		Slack.emitter.emit('error', err);
@@ -194,14 +197,12 @@ const Slack = {
 				startPing();
 			});
 	},
-	close : async ()=>new Promise((resolve, reject)=>{
+	close : ()=>{
+		if (Slack.socket.readyState === WebSocket.CLOSED) return;
+
 		Slack.closing = true;
-		Slack.socket.close(()=>{
-			Slack.connected = false;
-			Slack.closing = false;
-			return resolve();
-		});
-	}),
+		Slack.socket.close();
+	},
 	api : async (method, payload = {})=>{
 		if(payload.attachments) payload.attachments = JSON.stringify(payload.attachments);
 		return new Promise((resolve, reject)=>{
