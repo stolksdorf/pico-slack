@@ -39,7 +39,7 @@ const handleEvent = async (rawData, flags)=>{
 	try {
 		const evt = JSON.parse(rawData);
 		if(evt.error) return Slack.error(evt);
-		if(evt.type === 'goodbye') await reconnect();
+		if(evt.type === 'goodbye') await Slack.reconnect();
 		const event = processEvent(evt);
 		if(event.user_id === Slack.bot.id) return;
 		Slack.emitter.emit(event.type, event);
@@ -71,19 +71,8 @@ const handleSocketClose = ()=>{
 	Slack.connected = false;
 
 	// If the socket disconnects unexpectedly, try to reconnect.
-	if (!Slack.closing) reconnect();
+	if (!Slack.closing) Slack.reconnect();
 	else Slack.closing = false;
-};
-
-const reconnect = async ()=>{
-	try {
-		// Ensure the old socket doesn't keep emitting events once we have a new socket.
-		Slack.close();
-		await Slack.connect(Slack.token);
-		Slack.emitter.emit('reconnect');
-	} catch (err) {
-		Slack.emitter.emit('error', err);
-	}
 };
 
 const utils = {
@@ -203,6 +192,16 @@ const Slack = {
 
 		Slack.closing = true;
 		Slack.socket.close();
+	},
+	reconnect : async ()=>{
+		try {
+			// Ensure the old socket doesn't keep emitting events once we have a new socket.
+			Slack.close();
+			await Slack.connect(Slack.token);
+			Slack.emitter.emit('reconnect');
+		} catch (err) {
+			Slack.emitter.emit('error', err);
+		}
 	},
 	api : async (method, payload = {})=>{
 		if(payload.attachments) payload.attachments = JSON.stringify(payload.attachments);
