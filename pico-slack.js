@@ -80,6 +80,7 @@ const reconnect = async ()=>{
 		// Ensure the old socket doesn't keep emitting events once we have a new socket.
 		Slack.close();
 		await Slack.connect(Slack.token);
+		Slack.emitter.emit('reconnect');
 	} catch (err) {
 		Slack.emitter.emit('error', err);
 	}
