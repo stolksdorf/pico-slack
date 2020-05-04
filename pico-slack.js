@@ -7,7 +7,7 @@ let pingTimer;
 const startPing = (id = 0)=>{
 	if(!Slack.connected) return;
 	Slack.socket.send(JSON.stringify({ id, type : 'ping' }));
-	pingTimer = setTimeout(()=>startPing(id++), 5000);
+	pingTimer = setTimeout(()=>startPing(id+1), 5000);
 };
 
 const map = (obj, fn)=>Object.keys(obj).map((key)=>fn(obj[key], key));
@@ -35,10 +35,11 @@ const processTeamInfo = (teamInfo)=>{
 	}
 };
 
-const handleEvent = (rawData, flags)=>{
+const handleEvent = async (rawData, flags)=>{
 	try {
 		const evt = JSON.parse(rawData);
 		if(evt.error) return Slack.error(evt);
+		if(evt.type === 'goodbye') await Slack.reconnect();
 		const event = processEvent(evt);
 		if(event.user_id === Slack.bot.id) return;
 		Slack.emitter.emit(event.type, event);
@@ -56,7 +57,7 @@ const processEvent = (event)=>{
 	if(evt.channel_id) evt.channel = Slack.channels[evt.channel_id];
 	if(evt.user_id) evt.user = Slack.users[evt.user_id];
 	if(event.username) evt.user = event.username;
-	evt.isPrivate = evt.channel_id[0] == 'G';
+	evt.isPrivate = evt.channel_id && evt.channel_id[0] == 'G';
 	evt.isDirect = false;
 	if(evt.channel_id && evt.channel_id[0] == 'D'){
 		evt.isDirect = true;
@@ -64,6 +65,14 @@ const processEvent = (event)=>{
 	}
 	evt.mentionsBot = evt.isDirect || utils.textHas(evt.text, [Slack.bot.id, Slack.bot.name]);
 	return evt;
+};
+
+const handleSocketClose = ()=>{
+	Slack.connected = false;
+
+	// If the socket disconnects unexpectedly, try to reconnect.
+	if (!Slack.closing) Slack.reconnect();
+	else Slack.closing = false;
 };
 
 const utils = {
@@ -130,6 +139,7 @@ const Slack = {
 	utils,
 
 	connected   : false,
+	closing     : false,
 	token       : '',
 	socket      : null,
 	log_channel : 'diagnostics',
@@ -154,6 +164,7 @@ const Slack = {
 	onChannelMessage : (channel, handler)=>{
 		Slack.emitter.on('message', (event)=>event.channel === channel && handler(event));
 	},
+	onError : (handler)=>Slack.emitter.on('error', handler),
 	onEvent : (eventType, handler)=>Slack.emitter.on(eventType, handler),
 
 	connect : async (token)=>{
@@ -166,6 +177,8 @@ const Slack = {
 					Slack.socket = new WebSocket(data.url);
 					Slack.socket.on('open', resolve);
 					Slack.socket.on('message', handleEvent);
+					Slack.socket.on('close', handleSocketClose);
+					Slack.socket.on('error', (err)=>Slack.emitter.emit('error', err));
 				});
 			})
 			.then(()=>{
@@ -174,12 +187,22 @@ const Slack = {
 				startPing();
 			});
 	},
-	close : async ()=>new Promise((resolve, reject)=>{
-		Slack.socket.close(()=>{
-			Slack.connected = false;
-			return resolve();
-		});
-	}),
+	close : ()=>{
+		if (Slack.socket.readyState === WebSocket.CLOSED) return;
+
+		Slack.closing = true;
+		Slack.socket.close();
+	},
+	reconnect : async ()=>{
+		try {
+			// Ensure the old socket doesn't keep emitting events once we have a new socket.
+			Slack.close();
+			await Slack.connect(Slack.token);
+			Slack.emitter.emit('reconnect');
+		} catch (err) {
+			Slack.emitter.emit('error', err);
+		}
+	},
 	api : async (method, payload = {})=>{
 		if(payload.attachments) payload.attachments = JSON.stringify(payload.attachments);
 		return new Promise((resolve, reject)=>{
@@ -224,6 +247,7 @@ const Slack = {
 		});
 	},
 	log   : (...args)=>utils.log(args, { color : 'good' }),
+	warn  : (...args)=>utils.log(args, { color : 'warning', logger : console.warn }),
 	error : (...errs)=>utils.log(errs, { color : 'danger', logger : console.error }),
 };
 
