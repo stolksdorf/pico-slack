@@ -3,7 +3,7 @@ const glob = require('glob');
 const path = require('path');
 
 process.on('unhandledRejection', (err)=>{
-	Slack.utils.log(err, { footer : 'Unhandled rejection within promise', color : 'danger', logger : console.error });
+	Slack.utils.log([err], { footer : 'Unhandled rejection within promise', color : 'danger', logger : console.error });
 });
 process.on('uncaughtException', (err)=>Slack.error(err));
 
