@@ -184,6 +184,7 @@ const Slack = {
 			limit: 800
 		});
 		channels.map(channel=>{
+			if(channel.is_archived) return;
 			if(channel.is_channel){
 				Slack.channels[channel.id] = channel.name;
 				Slack.channel_ids[channel.name] = channel.id;
