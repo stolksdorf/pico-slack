@@ -180,7 +180,8 @@ const Slack = {
 			if(member.is_bot) Slack.bots[member.id] = member.name;
 		});
 		const {channels} = await Slack.api('conversations.list', {
-			types: 'public_channel, private_channel, im'
+			types: 'public_channel, private_channel, im',
+			limit: 800
 		});
 		channels.map(channel=>{
 			if(channel.is_channel){
@@ -227,7 +228,6 @@ const Slack = {
 		};
 	},
 	send : async (target, text, opts = {})=>{
-		console.log(utils.getTarget(target))
 		return Slack.api('chat.postMessage', {
 			...utils.getTarget(target),
 			...opts,
