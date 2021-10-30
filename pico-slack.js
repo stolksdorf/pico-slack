@@ -15,26 +15,6 @@ const findKey = (obj, fn)=>Object.keys(obj).find((key)=>fn(obj[key], key));
 const wait = async (n, val)=>new Promise((r)=>setTimeout(()=>r(val), n));
 const sequence = async (obj, fn)=>Object.keys(obj).reduce((a, key)=>a.then((r)=>fn(obj[key], key, r)), Promise.resolve());
 
-//https://api.slack.com/methods/rtm.start
-const processTeamInfo = (teamInfo)=>{
-	Slack.info = teamInfo;
-	Slack.bot.id = teamInfo.self.id;
-
-	map(teamInfo.users,   (user)=>{
-		if(user.deleted == true || !user.profile) return;
-		Slack.users[user.id] = user.name;
-		if(user.profile && user.profile.bot_id) Slack.bots[user.profile.bot_id] = user.id;
-	});
-
-	map(teamInfo.channels, (channel)=>Slack.channels[channel.id] = channel.name);
-	map(teamInfo.groups,   (channel)=>Slack.channels[channel.id] = channel.name);
-	map(teamInfo.ims,      (im)=>Slack.dms[Slack.users[im.user]] = im.id);
-
-	if(!findKey(Slack.channels, (name, id)=>name == Slack.log_channel)){
-		throw `Could not find the channel to send logs to. Either create '#${Slack.log_channel}' or change the log_channel`;
-	}
-};
-
 const handleEvent = async (rawData, flags)=>{
 	try {
 		const evt = JSON.parse(rawData);
@@ -79,7 +59,7 @@ const utils = {
 	clean     : (emoji, wrap = ':')=>`${wrap}${emoji.replace(/:/g, '')}${wrap}`,
 	getTarget : (target)=>{
 		let channel, thread_ts;
-		if(typeof target == 'string') channel = Slack.dms[target] || target;
+		if(typeof target == 'string') channel = Slack.dm_ids[target] || Slack.channel_ids[target] || target;
 		if(typeof target == 'object'){
 			channel = target.channel_id || target.channel;
 			thread_ts = (target.message.thread_ts !== target.ts)
@@ -144,9 +124,12 @@ const Slack = {
 	socket      : null,
 	log_channel : 'diagnostics',
 	channels    : {},
+	channel_ids : {},
 	users       : {},
+	user_ids    : {},
 	bots        : {},
 	dms         : {},
+	dm_ids      : {},
 	bot         : {
 		id   : '',
 		name : 'bot',
@@ -169,11 +152,10 @@ const Slack = {
 
 	connect : async (token)=>{
 		Slack.token = token;
-		return Slack.api('rtm.start')
+		return Slack.api('rtm.connect')
 			.then((data)=>{
 				return new Promise((resolve, reject)=>{
 					if(!data.ok || !data.url) return reject(`bad access token`);
-					processTeamInfo(data);
 					Slack.socket = new WebSocket(data.url);
 					Slack.socket.on('open', resolve);
 					Slack.socket.on('message', handleEvent);
@@ -181,15 +163,38 @@ const Slack = {
 					Slack.socket.on('error', (err)=>Slack.emitter.emit('error', err));
 				});
 			})
+			.then(()=>Slack.fetchTeamInfo())
 			.then(()=>{
 				Slack.connected = true;
 				Slack.emitter.emit('connect');
 				startPing();
 			});
 	},
+	fetchTeamInfo : async ()=>{
+		const {members} = await Slack.api('users.list');
+		members.map(member=>{
+			if(!member.is_bot){
+				Slack.users[member.id] = member.name;
+				Slack.user_ids[member.name] = member.id;
+			}
+			if(member.is_bot) Slack.bots[member.id] = member.name;
+		});
+		const {channels} = await Slack.api('conversations.list', {
+			types: 'public_channel, private_channel, im'
+		});
+		channels.map(channel=>{
+			if(channel.is_channel){
+				Slack.channels[channel.name] = channel.id;
+				Slack.channel_ids[channel.id] = channel.name;
+			}
+			if(channel.is_im){
+				Slack.dms[channel.id] = Slack.users[channel.user];
+				Slack.dm_ids[Slack.users[channel.user]] = channel.id;
+			}
+		});
+	},
 	close : ()=>{
 		if (Slack.socket.readyState === WebSocket.CLOSED) return;
-
 		Slack.closing = true;
 		Slack.socket.close();
 	},

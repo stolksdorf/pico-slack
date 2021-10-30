@@ -198,26 +198,40 @@ When `pico-slack` connects, Slack returns a massive dump of all the team informa
 
 ```js
 Slack.connected = true
-Slack.info = {], // Raw dump of all Slack team info
 Slack.channels = {
      C0VL2BUUX: 'diagnostics',
      C0VL784KT: 'general',
 }
+Slack.channel_ids = {
+     diagnostics: 'C0VL2BUUX',
+     general : 'C0VL784KT',
+}
+
 Slack.users = {
      U0VKSFTB6: 'higgins',
      U0VL783MX: 'scott'
 }
-Slack.bots = {
-     B0VKVBSQ6: 'U0VKSFTB6',
+Slack.user_ids = {
+     higgins : 'U0VKSFTB6',
+     scott : 'U0VL783MX'
 }
+
 Slack.dms = {
+     D0VKSFTBN : 'scott',
+     D0VLD2KGA : 'slackbot'
+}
+Slack.dm_ids = {
      scott: 'D0VKSFTBN',
      slackbot: 'D0VLD2KGA'
 }
+
 Slack.bot = {
      id: 'U0VKSFTB6',
      name: 'higgins',
      icon: ':robot_face:'
+}
+Slack.bots = {
+     B0VKVBSQ6: 'U0VKSFTB6',
 }
 ```
 
