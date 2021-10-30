@@ -184,8 +184,8 @@ const Slack = {
 		});
 		channels.map(channel=>{
 			if(channel.is_channel){
-				Slack.channels[channel.name] = channel.id;
-				Slack.channel_ids[channel.id] = channel.name;
+				Slack.channels[channel.id] = channel.name;
+				Slack.channel_ids[channel.name] = channel.id;
 			}
 			if(channel.is_im){
 				Slack.dms[channel.id] = Slack.users[channel.user];
@@ -227,13 +227,17 @@ const Slack = {
 		};
 	},
 	send : async (target, text, opts = {})=>{
+		console.log(utils.getTarget(target))
 		return Slack.api('chat.postMessage', {
 			...utils.getTarget(target),
 			...opts,
 			text,
 			username   : opts.username || Slack.bot.name,
 			icon_emoji : utils.clean(opts.icon_emoji || Slack.bot.icon),
-		});
+		})
+		.catch(err=>{
+			throw { err : err.toString(), target, ...utils.getTarget(target), text }
+		})
 	},
 	thread : async (event, text, opts = {})=>{
 		if(!event.thread_ts && !event.ts) throw `Can not start thread from event`;
