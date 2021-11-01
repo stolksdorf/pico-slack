@@ -156,6 +156,9 @@ const Slack = {
 			.then((data)=>{
 				return new Promise((resolve, reject)=>{
 					if(!data.ok || !data.url) return reject(`bad access token`);
+					Slack.bot.id = data.self.id;
+					Slack.bot.name = data.self.name;
+
 					Slack.socket = new WebSocket(data.url);
 					Slack.socket.on('open', resolve);
 					Slack.socket.on('message', handleEvent);
