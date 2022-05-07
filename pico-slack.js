@@ -21,6 +21,7 @@ const handleEvent = async (rawData, flags)=>{
 		if(evt.error) return Slack.error(evt);
 		if(evt.type === 'goodbye') await Slack.reconnect();
 		const event = processEvent(evt);
+		if(event.subtype == 'bot_message') return;
 		if(event.user_id === Slack.bot.id) return;
 		Slack.emitter.emit(event.type, event);
 	} catch (err){ Slack.error(err); }
