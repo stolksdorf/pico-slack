@@ -73,10 +73,12 @@ const utils = {
 		if(!msg) return false;
 		if(msg.text) msg = msg.text;
 		if(typeof msg !== 'string') return false;
-		msg = msg.toLowerCase();
-		return filters.every((options)=>{
-			if(typeof options == 'string') options = [options];
-			return !!options.find((opt)=>msg.indexOf(opt.toLowerCase()) !== -1);
+		const tokens = msg.toLowerCase().split(/\W/g);
+		return filters.every((filter)=>{
+			if(Array.isArray(filter)){
+				return filter.some(word=>tokens.includes(word.toLowerCase()));
+			}
+			return tokens.includes(filter.toLowerCase());
 		});
 	},
 	getTraceMessage : (values)=>{
